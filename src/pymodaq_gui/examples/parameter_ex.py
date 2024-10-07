@@ -103,11 +103,19 @@ class ParameterEx(ParameterManager):
             {'title': 'Table widget', 'name': 'tablewidget', 'type': 'table', 'value':
                 OrderedDict(key1='data1', key2=24), 'header': ['keys', 'limits'], 'height': 100},
             {'title': 'Table view', 'name': 'tabular_table', 'type': 'table_view',
-             'delegate': table.SpinBoxDelegate, 'menu': True,
-             'value': table.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),
+             'delegate': table.BooleanDelegate(), 'menu': True,
+             'value': table.TableModel([[True, 0.2, 0.3]], ['value1', 'value2', 'value3']),
              'tip': 'The advantage of the Table model lies in its modularity.\n For concrete examples see the'
                     'TableModelTabular and the TableModelSequential custom models in the'
                     ' pymodaq.utils.scanner module'},
+            {'title': 'Table view', 'name': 'tabular_table_multitypes', 'type': 'table_view',
+             'delegate': [None,table.BooleanDelegate(),None,table.SpinBoxDelegate(),], 'menu': True,
+             'value': table.TableModel([[True, False,0.1,0.1]], ['Bool_Standard', 'Bool_Delegate', 'Spinbox_standard', 'Spinbox_delegate']),
+             'tip': 'Possibility to alternate between different delegate'},         
+            {'title': 'Table view', 'name': 'tabular_table_customized_delegates', 'type': 'table_view',
+             'delegate': [None,table.SpinBoxDelegate(decimals=1,min=0,max=10),table.SpinBoxDelegate(decimals=3,min=-10,max=0),table.SpinBoxDelegate(decimals=5),], 'menu': True,
+             'value': table.TableModel([[0.1,0.1,-0.1,0.1]], ['Spinbox_standard','Spinbox_1d_pos', 'Spinbox_3d_neg', 'Spinbox_5d',]),
+             'tip': 'Different spinbox options: standard, positive 1 decimal, negative 3 decimals, 5 decimals'},                                 
         ]},  # The advantage of the Table model lies in its modularity for concrete examples see the
         # TableModelTabular and the TableModelSequential custom models in the pymodaq.utils.scanner module
     ]

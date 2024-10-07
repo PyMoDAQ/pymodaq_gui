@@ -202,8 +202,10 @@ class BooleanDelegate(QtWidgets.QItemEditorFactory):
     """
     TO implement custom widget editor for cells in a tableview
     """
-    def createEditor(self, userType, parent):
+    def createEditor(self, userType, parent,iscentered=True):
         boolean = QtWidgets.QCheckBox(parent)
+        if iscentered:
+            boolean.setStyleSheet("margin-left:50%; margin-right:50%;")
         return boolean
 
 

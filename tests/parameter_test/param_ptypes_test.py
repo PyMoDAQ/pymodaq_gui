@@ -88,3 +88,22 @@ class TestItemSelect:
             listwidget.select_item(listwidget.item(2), True)
             assert settings.value() == dict(all_items=['item1', 'item2', 'item3', ],
                                             selected=['item1', 'item3'])
+            
+
+class TestTableView:
+
+    def test_isSelected_setValue(self, init_ParameterTree):
+            import pymodaq_gui.utils.widgets.table as table
+
+            params = {'title': 'Table view', 'name': 'tabular_table_multitypes', 'type': 'table_view',
+             'delegate': [None,table.BooleanDelegate(),None,table.SpinBoxDelegate(),], 'menu': True,
+             'value': table.TableModel([[True, False,0.15,0.10]], ['Bool_Standard', 'Bool_Delegate', 'Spinbox_standard', 'Spinbox_delegate']),
+             'tip': 'Possibility to alternate between different delegate'}  
+            tree = init_ParameterTree
+            settings = Parameter.create(**params)
+            tree.setParameters(settings, showTop=False)
+            assert settings.value().get_data_all() == [[True, False,0.15,0.10]]                 
+            # Keeping selection order + erase non existing items
+            settings.setValue(table.TableModel([[False, True,0.25,0.20],[True, False,0.42,0.40]], ['Bool_Standard', 'Bool_Delegate', 'Spinbox_standard', 'Spinbox_delegate']))
+            assert settings.value().get_data_all() == [[False, True,0.25,0.20],[True, False,0.42,0.40]]
+            
