@@ -13,12 +13,17 @@ from pathlib import Path
 
 def create_icon(icon_name: str):
     icon = QtGui.QIcon()
-    if Path(icon_name).is_file():
+    if Path(icon_name).is_file(): # Test if icon is in path
         icon.addPixmap(QtGui.QPixmap(icon_name), QtGui.QIcon.Normal,
                        QtGui.QIcon.Off)
     else:
-        icon.addPixmap(QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png"), QtGui.QIcon.Normal,
-                       QtGui.QIcon.Off)
+        pixmap = QtGui.QPixmap(f":/icons/Icon_Library/{icon_name}.png") # Test if icon is in pymodaq's library
+        if pixmap.isNull(): 
+            if hasattr(QtGui.QIcon.ThemeIcon,icon_name): # Test if icon is in Qt's library
+                icon = QtGui.QIcon.fromTheme(getattr(QtGui.QIcon.ThemeIcon,icon_name))
+        else:
+            icon.addPixmap(QtGui.QPixmap(pixmap), QtGui.QIcon.Normal,
+                        QtGui.QIcon.Off)
     return icon
 
 
@@ -48,7 +53,7 @@ class QAction(QAction):
         self.setIcon(create_icon(icon_name))
 
 
-def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, checked=False,
+def addaction(name: str = '', icon_name: Union[str,QtGui.QIcon] = '', tip = '', checkable=False, checked=False,
               slot: Callable = None, toolbar: QtWidgets.QToolBar = None,
               menu: QtWidgets.QMenu = None, visible=True, shortcut=None,
               enabled=True):
@@ -58,8 +63,8 @@ def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, chec
     ----------
     name: str
         Displayed name if should be displayed (for instance in menus)
-    icon_name: str
-        png file name to produce the icon
+    icon_name: str / QtGui.QIcon
+        the png file name to produce the icon or the icon
     tip: str
         a tooltip to be displayed when hovering above the action
     checkable: bool
@@ -79,8 +84,12 @@ def addaction(name: str = '', icon_name: str = '', tip='', checkable=False, chec
     enabled: bool
         set the enabled state
     """
+    
     if icon_name != '':
-        action = QAction(create_icon(icon_name), name, None)
+        if isinstance(icon_name,QtGui.QIcon):    
+            action = QAction(icon_name, name, None)
+        else:            
+            action = QAction(create_icon(icon_name), name, None)
     else:
         action = QAction(name)
 
@@ -188,7 +197,7 @@ class ActionManager:
         raise NotImplementedError(f'You have to define actions here in the following form:'
                                   f'{self.setup_actions.__doc__}')
 
-    def add_action(self, short_name: str = '', name: str = '', icon_name: str = '', tip='',
+    def add_action(self, short_name: str = '', name: str = '', icon_name: Union[str,QtGui.QIcon] = '', tip='',
                    checkable=False,
                    checked=False, toolbar=None, menu=None,
                    visible=True, shortcut=None, auto_toolbar=True, auto_menu=True,
@@ -201,8 +210,8 @@ class ActionManager:
             the name as referenced in the dict self.actions
         name: str
             Displayed name if should be displayed in
-        icon_name: str
-            png file name to produce the icon
+        icon_name: str / QtGui.QIcon
+            the png file name to produce the icon or the icon
         tip: str
             a tooltip to be displayed when hovering above the action
         checkable: bool
