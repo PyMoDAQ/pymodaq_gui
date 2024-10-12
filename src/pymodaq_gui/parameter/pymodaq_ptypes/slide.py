@@ -125,7 +125,7 @@ class SliderParameterItem(WidgetParameterItem):
             'value': 0, 'min': None, 'max': None,
              'dec': False,
             'siPrefix': False, 'suffix': '', 'decimals': 12,
-            'int': False
+            'int': False,'bounds':None,
         }
         #Update relevant opts
         for k in defs:
@@ -134,14 +134,16 @@ class SliderParameterItem(WidgetParameterItem):
         #Additional changes according to user syntax
         if 'subtype' not in opts:
             opts['subtype'] = 'linear'
-        defs['bounds'] = [0., float(self.param.value() or 1)]  # max value set to default value when no max given or 1 if no default
-        if 'limits' not in opts:
-            if 'min' in opts:
-                defs['bounds'][0] = opts['min']
-            if 'max' in opts:
-                defs['bounds'][1] = opts['max']
-        else:
-            defs['bounds'] = opts['limits']
+            
+        if 'bounds' not in opts:
+            defs['bounds'] = [0., float(self.param.value() or 1)]  # max value set to default value when no max given or 1 if no default
+            if 'limits' not in opts:
+                if 'min' in opts:
+                    defs['bounds'][0] = opts['min']
+                if 'max' in opts:
+                    defs['bounds'][1] = opts['max']
+            else:
+                defs['bounds'] = opts['limits']
                                 
         w = SliderSpinBox(subtype=opts['subtype'],**defs)
         self.setSizeHint(1, QtCore.QSize(50, 50))
@@ -158,7 +160,15 @@ class SliderParameterItem(WidgetParameterItem):
         super().showEditor()
         self.widget.spinbox.setFocus()     
 
-
+    def optsChanged(self, param, opts):
+        # Reimplement optsChanged to correctly update spinbox opts when changed
+        try:
+            super().optsChanged(param, opts)
+        except AttributeError:
+            pass
+        if 'bounds' in opts:
+            self.widget.spinbox.opts['bounds'] = opts['bounds'] #Change in bounds is updated
+        
 class SliderParameter(SimpleParameter):
     itemClass = SliderParameterItem
 
