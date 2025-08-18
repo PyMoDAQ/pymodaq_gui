@@ -37,12 +37,6 @@ class Filter:
     def register_target_slot(self, slot):
         self._slot_to_send_data = slot
 
-    def unregister_activation_signal(self, activation_signal):
-        activation_signal.disconnect()
-
-    def unregister_target_slot(self):
-        self._slot_to_send_data = None
-
     @Slot(bool)
     def set_active(self, activate=True):
         self._is_active = activate

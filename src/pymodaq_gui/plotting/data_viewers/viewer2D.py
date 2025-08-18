@@ -745,9 +745,9 @@ class Viewer2D(ViewerBase):
 
         self.view = View2D(parent)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
-                                        IMAGE_TYPES)
+                                                 IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
-        self.filter_from_rois.register_target_slot(self.process_roi_lineouts)        
+        self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
 
         self.filter_from_crosshair = Filter2DFromCrosshair(self.view.crosshair, self.view.data_displayer.get_images(),
                                                            IMAGE_TYPES)
