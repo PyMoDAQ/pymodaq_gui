@@ -95,6 +95,8 @@ class ROIScalableGroup(GroupParameter):
     def make_ROIParam2D(roi_type, index):
             children = []    
             children.extend([{'title': 'Type', 'name': 'roi_type', 'type': 'list', 'value': roi_type, 'limits':['RectROI','EllipseROI','CircularROI'], 'readonly': False,}])
+            children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push', 
+                             'value': False, 'default': False})
             children.extend(ROIScalableGroup.makeChannelsParam('2D'))
             children.extend(ROIScalableGroup.makeMathParam('2D'))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
@@ -116,7 +118,9 @@ class ROIScalableGroup(GroupParameter):
 
     @staticmethod    
     def make_ROIParam1D(roi_type, index):
-            children = []    
+            children = []
+            children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push', 
+                             'value': False, 'default': False})            
             children.extend(ROIScalableGroup.makeChannelsParam('1D'))
             children.extend(ROIScalableGroup.makeMathParam('1D'))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
@@ -134,6 +138,7 @@ class ROIManager(QObject):
     new_ROI_signal = Signal(str)
     remove_ROI_signal = Signal(str)
     roi_value_changed = Signal(str, tuple)
+    roi_process_data_changed = Signal(bool, str)
     color_signal = Signal(list)
     roi_update_children = Signal(list)
     roi_changed = Signal()
@@ -433,6 +438,8 @@ class ROIManager(QObject):
         elif param.name() == 'height':
             size = roi.size()
             roi.setSize((size[0], param.value()))
+        elif param.name() == 'process_data':
+            self.roi_process_data_changed.emit(param.value(), roi_key)            
 
         self.update_roi_tree(roi)
         roi.signalBlocker.unblock()
@@ -454,7 +461,6 @@ class ROIManager(QObject):
     @Slot(type(ROI))
     def update_roi_tree(self, roi):
         par = self.get_parameter(roi)        
-
         if isinstance(roi, LinearROI):
             pos = roi.getRegion()
         else:

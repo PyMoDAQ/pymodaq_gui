@@ -745,9 +745,9 @@ class Viewer2D(ViewerBase):
 
         self.view = View2D(parent)
         self.filter_from_rois = Filter2DFromRois(self.view.roi_manager, self.view.data_displayer.get_image('red'),
-                                                 IMAGE_TYPES)
+                                        IMAGE_TYPES)
         self.filter_from_rois.register_activation_signal(self.view.get_action('roi').triggered)
-        self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
+        self.filter_from_rois.register_target_slot(self.process_roi_lineouts)        
 
         self.filter_from_crosshair = Filter2DFromCrosshair(self.view.crosshair, self.view.data_displayer.get_images(),
                                                            IMAGE_TYPES)
@@ -935,6 +935,7 @@ class Viewer2D(ViewerBase):
 
     def prepare_connect_ui(self):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
+        self.roi_manager.roi_process_data_changed.connect(self.roi_process_data_changed)
 
         self.roi_manager.roi_changed.connect(self.roi_changed)
         self.roi_manager.roi_value_changed.connect(self.roi_changed)
@@ -969,6 +970,25 @@ class Viewer2D(ViewerBase):
         posx, posy = self.view.scale_axis(posx, posy)
         self.sig_double_clicked.emit(posx, posy)
 
+    def roi_process_data_changed(self, process_data: bool, roi_key: str):
+        roi = self.roi_manager._ROIs[roi_key]
+        self.filter_from_rois.set_roi_active(roi_key, process_data)
+        if process_data:
+            if self.filter_from_rois._slot_to_send_data is None:
+                self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
+            self.view.add_roi_displayer(roi_key, roi_type='', roi_name=roi.name)
+        else:
+            self.view.remove_roi_displayer(roi.name)
+            self.data_to_export = DataToExport([
+                dwa for dwa in self.data_to_export.data
+                if getattr(dwa, "origin", None) != roi.name
+            ])
+        if hasattr(self, 'measure_data_dict'):
+            keys_to_remove = [k for k in self.measure_data_dict if k.startswith(f"{roi.name}/") 
+                            or k.endswith(f":")]
+            for k in keys_to_remove:
+                self.measure_data_dict.pop(k, None)
+            self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
 
     @property
     def x_axis(self):

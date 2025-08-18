@@ -37,6 +37,12 @@ class Filter:
     def register_target_slot(self, slot):
         self._slot_to_send_data = slot
 
+    def unregister_activation_signal(self, activation_signal):
+        activation_signal.disconnect()
+
+    def unregister_target_slot(self):
+        self._slot_to_send_data = None
+
     @Slot(bool)
     def set_active(self, activate=True):
         self._is_active = activate
@@ -232,6 +238,11 @@ class Filter1DFromRois(Filter):
         self._roi_settings = roi_manager.settings
         self._ROIs = roi_manager.ROIs
         self._axis: data_mod.Axis = None
+        self._roi_active = {key: False for key in self._ROIs.keys()}
+
+    def set_roi_active(self, roi_key: str, active: bool):
+        if roi_key in self._ROIs:
+            self._roi_active[roi_key] = active
 
     def update_axis(self, axis: data_mod.Axis):
         self._axis = axis
@@ -244,14 +255,17 @@ class Filter1DFromRois(Filter):
                 self.update_axis(axis)
             if data is not None:                                
                 for roi_key, roi in self._ROIs.items():
-                    sub_data = data.deepcopy()                
-                    labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
-                    if labels:
-                        sub_data.data = [sub_data[sub_data.labels.index(label)] for label in labels]
-                        sub_data.labels = [label for label in labels]                
-                    dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
-                                                                    sub_data)
-                    dte.append(dte_tmp)
+                    if not self._roi_active.get(roi_key, False):
+                        continue 
+                    else:
+                        sub_data = data.deepcopy()                
+                        labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
+                        if labels:
+                            sub_data.data = [sub_data[sub_data.labels.index(label)] for label in labels]
+                            sub_data.labels = [label for label in labels]                
+                        dte_tmp = self.get_data_from_roi(roi, self._roi_settings.child('ROIs', roi_key),
+                                                                        sub_data)
+                        dte.append(dte_tmp)
         except Exception as e:
             logger.warning(f'Issue with the ROI: {str(e)}')
         return dte
@@ -301,6 +315,11 @@ class Filter2DFromRois(Filter):
         self._graph_item = graph_item
         self.axes = (0, 1)
         self._ROIs = roi_manager.ROIs
+        self._roi_active = {key: False for key in self._ROIs.keys()}
+
+    def set_roi_active(self, roi_key: str, active: bool):
+        if roi_key in self._ROIs:
+            self._roi_active[roi_key] = active
 
     def _filter_data(self, dwa: data_mod.DataRaw) -> DataToExport:
         dte = DataToExport('ROI')
@@ -308,11 +327,15 @@ class Filter2DFromRois(Filter):
             try:
                 labels = []
                 for roi_key, roi in self._ROIs.items():
-                    labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
-                    sub_data = dwa.deepcopy()
-                    if labels:
-                        sub_data.data = [dwa[dwa.labels.index(label)] for label in labels]
-                        sub_data.labels = [label for label in labels]
+                    if not self._roi_active.get(roi_key, False):
+                        continue
+                    else:
+                        labels = self._roi_settings['ROIs', roi_key, 'use_channel']['selected']
+                        sub_data = dwa.deepcopy()
+                        if labels:
+                            sub_data.data = [dwa[dwa.labels.index(label)] for label in labels]
+                            sub_data.labels = [label for label in labels]
+
                         dte_temp = self.get_xydata_from_roi(roi, sub_data,
                                                                 self._roi_settings['ROIs',
                                                                 roi_key, 'math_function'])
