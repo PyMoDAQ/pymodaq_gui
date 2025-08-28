@@ -28,9 +28,9 @@ jobs:
         qt-backend: ["pyqt5", "pyqt6", "pyside6"]
     runs-on: ${{ matrix.os }}
     env:
-      DISPLAY: ':99'
       QT_DEBUG_PLUGINS: 1
-      QT_QPA_PLATFORM: offscreen
+      QT_OPENGL: software
+      LIBGL_ALWAYS_SOFTWARE: 1
     steps:     
       # Get the branch name for the badge generation
       - name: Extract branch name
@@ -57,7 +57,14 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt update
-          sudo apt install -y  yaru-theme-icon libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils libgl1 libegl1
+          sudo apt install -y \
+            xvfb libx11-xcb1 libxcb1 libx11-6 libxext6 libxrender1 \
+            libxi6 libsm6 libxrandr2 libxinerama1 libfontconfig1 \
+            libgl1-mesa-glx libgl1-mesa-dri libegl1-mesa \
+            fonts-dejavu fonts-liberation yaru-theme-icon \
+            libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 \
+            libxcb-keysyms1 libxcb-cursor0 libxcb-randr0 \
+            libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0 x11-utils
           export QT_DEBUG_PLUGINS=1
           
           echo "XDG_CURRENT_DESKTOP=Unity" >> $GITHUB_ENV
@@ -69,16 +76,8 @@ jobs:
       - name: Exporting debug variables (Windows)
         if: runner.os == 'Windows'
         run: |
-          set QT_DEBUG_PLUGINS=1
-          set QT_QPA_PLATFORM=offscreen
-      - name: Setup Xvfb on linux
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb
-          /usr/bin/Xvfb :99 -screen 0 1920x1080x24 &
-          echo "DISPLAY=:99" >> $GITHUB_ENV
-
+          echo "QT_DEBUG_PLUGINS=1" >> $env:GITHUB_ENV
+          echo "QT_OPENGL=software" >> $env:GITHUB_ENV
       - name: Linting with flake8
         run: |
           # stop the build if there are Python syntax errors or undefined names
@@ -87,7 +86,7 @@ jobs:
         id: tests
         run: |
           mkdir coverage
-          pytest -vv --cov=pymodaq_gui
+          pytest -vv --cov=pymodaq_gui --xvfb
           mv .coverage coverage/coverage_${{ matrix.os }}_${{ matrix.python-version }}_${{ matrix.qt-backend }}
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4.6.2
