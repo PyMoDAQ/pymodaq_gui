@@ -595,6 +595,7 @@ class Viewer1D(ViewerBase):
 
     def prepare_connect_ui(self):
         self.view.ROIselect.sigRegionChangeFinished.connect(self.selected_region_changed)
+        self.roi_manager.roi_process_data_changed.connect(self.roi_process_data_changed)
         self._data_to_show_signal.connect(self.view.display_data)
         self.roi_manager.roi_changed.connect(self.roi_changed)
         self.roi_manager.roi_value_changed.connect(self.roi_changed)
@@ -614,6 +615,26 @@ class Viewer1D(ViewerBase):
 
     def roi_changed(self):
         self.filter_from_rois.filter_data(self._raw_data)
+
+    def roi_process_data_changed(self, process_data: bool, roi_key: str):
+        roi = self.roi_manager._ROIs[roi_key]
+        self.filter_from_rois.set_roi_active(roi_key, process_data)
+        if process_data:
+            if self.filter_from_rois._slot_to_send_data is None:
+                self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
+            self.view.add_roi_displayer(roi_key)
+        else:
+            self.view.remove_roi_displayer(roi.name)
+            self.data_to_export = DataToExport([
+                dwa for dwa in self.data_to_export.data
+                if getattr(dwa, "origin", None) != roi.name
+            ])
+        if hasattr(self, 'measure_data_dict'):
+            keys_to_remove = [k for k in self.measure_data_dict if k.startswith(f"{roi.name}/")
+                              or k.endswith(f":")]
+            for k in keys_to_remove:
+                self.measure_data_dict.pop(k, None)
+            self.view.roi_manager.settings.child('measurements').setValue(self.measure_data_dict)
 
     def crosshair_changed(self):
         self.filter_from_crosshair.filter_data(self._raw_data)

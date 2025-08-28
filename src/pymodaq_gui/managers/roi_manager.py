@@ -18,6 +18,7 @@ from pymodaq_gui.managers.action_manager import QAction
 
 from pymodaq_utils.utils import plot_colors
 from pymodaq_utils.logger import get_module_name, set_logger
+from pymodaq_utils.config import Config
 from pymodaq_gui.config_saver_loader import get_set_roi_path
 from pymodaq_gui.utils import select_file
 from pymodaq_gui.plotting.items.roi import RectROI,LinearROI,EllipseROI,CircularROI,ROI
@@ -32,15 +33,15 @@ data_processors = DataProcessorFactory()
 
 roi_path = get_set_roi_path()
 logger = set_logger(get_module_name(__file__))
-translate = QtCore.QCoreApplication.translate
-
+config = Config()
 
 ROI_NAME_PREFIX = 'ROI_'
 ROI2D_TYPES = ['RectROI', 'EllipseROI', 'CircularROI']
 
-ROI_NAME_PREFIX = 'ROI_'
+
 def roi_format(index):
     return f'{ROI_NAME_PREFIX}{index:02d}'
+
 
 class ROIScalableGroup(GroupParameter):
     def __init__(self, roi_type='1D', **opts):
@@ -96,7 +97,7 @@ class ROIScalableGroup(GroupParameter):
             children = []    
             children.extend([{'title': 'Type', 'name': 'roi_type', 'type': 'list', 'value': roi_type, 'limits':['RectROI','EllipseROI','CircularROI'], 'readonly': False,}])
             children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push', 
-                             'value': False, 'default': False})
+                             'value': config.get(('plotting', 'process_roi'), True),})
             children.extend(ROIScalableGroup.makeChannelsParam('2D'))
             children.extend(ROIScalableGroup.makeMathParam('2D'))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
@@ -119,8 +120,8 @@ class ROIScalableGroup(GroupParameter):
     @staticmethod    
     def make_ROIParam1D(roi_type, index):
             children = []
-            children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push', 
-                             'value': False, 'default': False})            
+            children.append({'title': 'Process data', 'name': 'process_data', 'type': 'led_push',
+                             'value': config.get(('plotting', 'process_roi'), True),})
             children.extend(ROIScalableGroup.makeChannelsParam('1D'))
             children.extend(ROIScalableGroup.makeMathParam('1D'))
             children.extend(ROIScalableGroup.makeDisplayParam(index))
@@ -130,7 +131,6 @@ class ROIScalableGroup(GroupParameter):
                     ]}, ])
             
             return children
-
 
 
 class ROIManager(QObject):
@@ -235,6 +235,7 @@ class ROIManager(QObject):
                 self.add_ROI(roi)
                 self.emit_colors()
                 self.roi_changed.emit()
+                self.roi_process_data_changed.emit(par['process_data'], roi.key())
 
             elif change == 'value':
                 if param.name() in putils.iter_children(self.settings.child('ROIs'), []):
@@ -439,7 +440,7 @@ class ROIManager(QObject):
             size = roi.size()
             roi.setSize((size[0], param.value()))
         elif param.name() == 'process_data':
-            self.roi_process_data_changed.emit(param.value(), roi_key)            
+            self.roi_process_data_changed.emit(param.value(), roi.key())
 
         self.update_roi_tree(roi)
         roi.signalBlocker.unblock()

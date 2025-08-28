@@ -976,7 +976,7 @@ class Viewer2D(ViewerBase):
         if process_data:
             if self.filter_from_rois._slot_to_send_data is None:
                 self.filter_from_rois.register_target_slot(self.process_roi_lineouts)
-            self.view.add_roi_displayer(roi_key, roi_type='', roi_name=roi.name)
+            self.view.add_roi_displayer(roi_key)
         else:
             self.view.remove_roi_displayer(roi.name)
             self.data_to_export = DataToExport([
