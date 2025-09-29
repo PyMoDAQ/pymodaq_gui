@@ -1,6 +1,7 @@
+from abc import ABCMeta, abstractmethod
 from typing import Union, TYPE_CHECKING, Dict
 
-from qtpy.QtCore import QObject, QLocale
+from qtpy.QtCore import QObject, QLocale, QEvent
 from qtpy import QtCore, QtWidgets
 
 from pyqtgraph.dockarea import DockArea
@@ -64,8 +65,44 @@ class CustomApp(QObject, ActionManager, ParameterManager):
             self.mainwindow.addToolBar(self._toolbar)
             self._menubar = self.mainwindow.menuBar()
             self.statusbar = self.mainwindow.statusBar()
-
+            self.mainwindow.installEventFilter(self)
         self.set_toolbar(self._toolbar)
+
+    def eventFilter(self, watched, event):
+        """
+           Handles `QEvent.Close` event sent to the main window by triggering `quit_fun`.
+
+           Parameters
+           ----------
+           watched : QObject
+               The object being watched for events.
+           event : QEvent
+               The event that occurred.
+           Returns
+           -------
+           bool
+               True if the event is handled and should not propagate further,
+               otherwise False. Delegates to the parent implementation if applicable.
+           """
+        if watched is self.mainwindow and event.type() == QEvent.Close:
+            self.quit_fun()
+            try:
+                return super().eventFilter(watched, event)
+            finally:
+                ...
+        return False
+
+    @abstractmethod
+    def quit_fun(self):
+        """
+            A method executed when the window is cloded. It neeeds to be reimplemented in subclasses. It should take
+            care of:
+                - Stop any actions running in the background (acquisition, move, etc.)
+                - Stop properly any thread
+                - Release any held resource
+                - Close the associated window
+        """
+        raise NotImplementedError
 
     def setup_ui(self):
         self.setup_docks()
