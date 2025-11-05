@@ -10,6 +10,16 @@ import pymodaq_gui.utils.widgets.table as table
 from pymodaq_gui.utils.utils import create_nested_menu
 from pymodaq_gui.parameter.pymodaq_ptypes import GroupParameter, registerParameterType
 from pymodaq_gui.managers.parameter_manager import ParameterManager
+from pymodaq_gui.utils.widgets.delegates import (
+    NumericDelegate,
+    ComboBoxDelegate,
+    ColumnSpecificDelegate,
+    PatternCompleterDelegate,
+    BooleanDelegate,
+    SpinBoxDelegate,
+)
+from pyqtgraph.parametertree import ParameterTree, Parameter
+
 
 class ScalableGroup(GroupParameter):
     def __init__(self, **opts):
@@ -23,7 +33,86 @@ class ScalableGroup(GroupParameter):
 # Need to register a new type to properly trigger addNew
 registerParameterType('groupedit', ScalableGroup, override=True)
 
+def create_comprehensive_table():
+    """
+    Create a table showcasing all delegate types:
+    - Column 0: Plain text (no delegate)
+    - Column 1: Numeric spinbox (0-100)
+    - Column 2: ComboBox dropdown
+    - Column 3: Pattern completer (@mentions, #tags)
+    - Column 4: Numeric with decimals (0-10, 2 decimals)
+    - Column 5: Boolean checkbox
+    """
 
+    # Setup pattern completer delegate
+    pattern_delegate = PatternCompleterDelegate()
+    pattern_delegate.add_completer("@", ["Alice", "Bob", "Charlie", "David", "Eve"])
+    pattern_delegate.add_completer(
+        "#", ["important", "urgent", "review", "done", "todo"]
+    )
+
+    # Create column-specific delegate
+    delegate = ColumnSpecificDelegate(
+        {
+            1: NumericDelegate(min_val=0, max_val=100, decimals=0),
+            2: ComboBoxDelegate(["Type A", "Type B", "Type C", "Type D"]),
+            3: pattern_delegate,
+            4: SpinBoxDelegate(decimals=4, min=-1e6, max=1e6, units="s"),
+            5: BooleanDelegate(),
+        }
+    )
+
+    table_params = {
+        "title": "Multi-Delegate Table",
+        "name": "multi_delegate_table",
+        "type": "table",
+        "columns": [
+            "Name (Plain)",
+            "Score (NumericDelegate 0-100)",
+            "Status (ComboBoxDelegate)",
+            "Tags (PatternDelegate @/#)",
+            "Rating (SpinBoxDelegate 0-10)",
+            "Checked (BooleanDelegate True/False)",
+        ],
+        "rows": 5,
+        "delegate": lambda: delegate,
+        "max_display_rows": 6,
+        "value": [
+            ["Sample 1", "75", "Type A", "@Alice #important", "8.5s", True],
+            ["Sample 2", "50", "Type B", "@Bob #urgent", "7.2s", True],
+            ["Sample 3", "90", "Type C", "@Charlie #review", "9.1s", False],
+            ["Sample 4", "60", "Type A", "", "6.8s"],
+            ["Sample 5", "", "", "", "", ""],
+        ],
+        "enable_row_controls": True,
+    }
+
+
+    return table_params
+    # return Parameter.create(name="params", type="group", children=params)
+def create_text_parameter():
+    text_params = {
+            "name": "Text Editing with pattern completion",
+            "type": "group",
+            "children": [
+                {
+                    "name": "Message",
+                    "type": "text_pattern",
+                    "value": "",
+                    "patterns": {
+                        "@": ["alice", "bob", "charlie"],
+                        "#": ["python", "javascript", "cpp"],
+                    },
+                    "completer_config": {
+                        "min_width": 200,
+                        "max_width": 400,
+                        "case_sensitive": False,
+                        "visual_indicator": True,
+                    },
+                },
+            ],
+        }
+    return text_params
 class ParameterEx(ParameterManager):
     params = [
         {'title': 'Groups:', 'name': 'groups', 'type': 'group', 'children': [
@@ -117,13 +206,15 @@ class ParameterEx(ParameterManager):
         {'title': 'Plain text:', 'name': 'texts', 'type': 'group', 'children': [
             {'title': 'Standard str', 'name': 'atte', 'type': 'str', 'value': 'this is a string you can edit'},
             {'title': 'Plain text', 'name': 'text', 'type': 'text', 'value': 'this is some text'},
+            create_text_parameter(),
             {'title': 'Plain text', 'name': 'textpb', 'type': 'text_pb', 'value': 'this is some text',
              'tip': 'If text_pb type is used, user can add text to the parameter'},
         ]},
 
         {'title': 'Tables:', 'name': 'tables', 'type': 'group', 'children': [
-            {'title': 'Table widget', 'name': 'tablewidget', 'type': 'table', 'value':
+            {'title': 'Table widget', 'name': 'tablewidget', 'type': 'table_dict', 'value':
                 OrderedDict(key1='data1', key2=24), 'header': ['keys', 'limits'], 'height': 100},
+                create_comprehensive_table(),
             {'title': 'Table view', 'name': 'tabular_table', 'type': 'table_view',
              'delegate': table.SpinBoxDelegate, 'menu': True,
              'value': table.TableModel([[0.1, 0.2, 0.3]], ['value1', 'value2', 'value3']),

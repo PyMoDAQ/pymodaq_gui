@@ -1,135 +1,157 @@
-from qtpy import QtWidgets, QtCore
-from collections import OrderedDict
-from pyqtgraph.parametertree.parameterTypes.basetypes import WidgetParameterItem
-from pyqtgraph.parametertree import Parameter
+"""
+Table parameter wrapping ManagedTableWidget.
+"""
 
-
-class TableWidget(QtWidgets.QTableWidget):
-    """
-        ============== ===========================
-        *Attributes**    **Type**
-        *valuechanged*   instance of pyqt Signal
-        *QtWidgets*      instance of QTableWidget
-        ============== ===========================
-    """
-
-    valuechanged = QtCore.Signal(OrderedDict)
-
-    def __init__(self):
-        super().__init__()
-
-    def get_table_value(self):
-        """
-            Get the contents of the self coursed table.
-
-            Returns
-            -------
-            data : ordered dictionnary
-                The getted values dictionnary.
-        """
-        data = OrderedDict([])
-        for ind in range(self.rowCount()):
-            item0 = self.item(ind, 0)
-            item1 = self.item(ind, 1)
-            if item0 is not None and item1 is not None:
-                try:
-                    data[item0.text()] = float(item1.text())
-                except Exception:
-                    data[item0.text()] = item1.text()
-        return data
-
-    def set_table_value(self, data_dict):
-        """
-            Set the data values dictionnary to the custom table.
-
-            =============== ====================== ================================================
-            **Parameters**    **Type**               **Description**
-            *data_dict*       ordered dictionnary    the contents to be stored in the custom table
-            =============== ====================== ================================================
-        """
-        try:
-            self.setRowCount(len(data_dict))
-            self.setColumnCount(2)
-            for ind, (key, value) in enumerate(data_dict.items()):
-                item0 = QtWidgets.QTableWidgetItem(key)
-                item0.setFlags(item0.flags() ^ QtCore.Qt.ItemIsEditable)
-                if isinstance(value, float):
-                    item1 = QtWidgets.QTableWidgetItem('{:.3e}'.format(value))
-                else:
-                    item1 = QtWidgets.QTableWidgetItem(str(value))
-                item1.setFlags(item1.flags() ^ QtCore.Qt.ItemIsEditable)
-                self.setItem(ind, 0, item0)
-                self.setItem(ind, 1, item1)
-            # self.valuechanged.emit(data_dict)
-
-        except Exception as e:
-            pass
-
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, SimpleParameter
+from pymodaq_gui.utils.widgets.managed_table import ManagedTableWidget
 
 class TableParameterItem(WidgetParameterItem):
+    """Widget item wrapping ManagedTableWidget."""
 
-    # def treeWidgetChanged(self):
-    #     """
-    #         Check for changement in the Widget tree.
-    #     """
-    #     # # TODO: fix so that superclass method can be called
-    #     # # (WidgetParameter should just natively support this style)
-    #     # WidgetParameterItem.treeWidgetChanged(self)
-    #     self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-    #     self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
-    #
-    #     # for now, these are copied from ParameterItem.treeWidgetChanged
-    #     self.setHidden(not self.param.opts.get('visible', True))
-    #     self.setExpanded(self.param.opts.get('expanded', True))
+    def __init__(self, param, depth):
+        super().__init__(param, depth)
+        self.hideWidget = False
 
     def makeWidget(self):
-        """
-            Make and initialize an instance of TableWidget.
-
-            Returns
-            -------
-            table : instance of TableWidget.
-                The initialized table.
-
-            See Also
-            --------
-            TableWidget
-        """
-        self.asSubItem = True
-        self.hideWidget = False
+        """Create ManagedTableWidget."""
         opts = self.param.opts
-        w = TableWidget()
-        if 'tip' in opts:
-            w.setToolTip(opts['tip'])
-        w.setColumnCount(2)
-        if 'header' in opts:
-            w.setHorizontalHeaderLabels(self.param.opts['header'])
-        if 'height' not in opts:
-            opts['height'] = 200
-        w.setMaximumHeight(opts['height'])
-        w.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Stretch)
-        # self.table.setReadOnly(self.param.opts.get('readonly', False))
-        w.value = w.get_table_value
-        w.setValue = w.set_table_value
-        w.sigChanged = w.itemChanged
-        return w
+        self.asSubItem = True
+
+        # Get initial value/data
+        initial_value = self.param.value()
+
+        widget = ManagedTableWidget(
+            data=initial_value,
+            columns=opts.get("columns", None),  # Let widget infer if not provided
+            rows=opts.get("rows", None),
+            enable_row_controls=opts.get("enable_row_controls", True),
+            max_display_rows=opts.get("max_display_rows", None),
+            delegate=opts.get("delegate")() if "delegate" in opts else None,
+        )
+        # widget.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        # widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
+        widget.setStyleSheet("""
+            ManagedTableWidget {
+                background: transparent;
+                border: none;
+            }
+        """)        
+        # Connect signals
+        widget.valueChanged.connect(self.widgetValueChanged)
+        widget.sigChanged = widget.valueChanged
+
+        self.widget = widget
+        return widget
+
+    def widgetValueChanged(self, data):
+        """Handle widget value changes."""
+        try:
+            self.param.setValue(data)            
+        except Exception as e:
+            print(f"Error updating parameter: {e}")
+
+    def setValue(self, val):
+        """Set widget value."""
+        self.widget.setValue(val)
+
+    def value(self):
+        """Get widget value."""
+        return self.widget.value()
+
+    def optsChanged(self, param, opts):
+        """Handle option changes."""
+        super().optsChanged(param, opts)
+
+        if "value" in opts:
+            self.widget.setValue(opts["value"])
+            self.widget.table.resizeColumnsToContents()
+
+        if "delegate" in opts:
+            delegate = opts["delegate"]()
+            self.widget.setDelegate(delegate)
 
 
-class TableParameter(Parameter):
+class TableParameter(SimpleParameter):
+    """Table parameter with row management and validation.
+
+    Can be initialized with:
+    - data: Infers shape from data
+    - columns + rows: Empty table with specified shape
+    - value: Legacy support (same as data)
     """
-        =============== =================================
-        **Attributes**    **Type**
-        *itemClass*       instance of TableParameterItem
-        *Parameter*       instance of pyqtgraph parameter
-        =============== =================================
-    """
+
     itemClass = TableParameterItem
-    """Editable string; displayed as large text box in the tree."""
 
-    # def __init(self):
-    #     super(TableParameter,self).__init__()
+    def __init__(self, **opts):
+        # Priority: data > value > columns/rows
+        if "data" in opts:
+            opts["value"] = opts.pop("data")
 
-    def setValue(self, value):
-        self.opts['value'] = value
-        self.sigValueChanged.emit(self, value)
+        if "value" not in opts:
+            rows = opts.get("rows", 5)
+            columns = opts.get("columns", ["Column 1", "Column 2", "Column 3"])
+            opts["value"] = [[""] * len(columns) for _ in range(rows)]
 
+        opts["expanded"] = True
+        super().__init__(**opts)
+
+    def valueIsDefault(self):
+        return True
+
+    def hasDefault(self):
+        return False
+
+    def setOpts(self, **opts):
+        """Override to trigger optsChanged."""
+        super().setOpts(**opts)
+        for item in self.items:
+            if hasattr(item, "optsChanged"):
+                item.optsChanged(self, opts)
+
+    def setValue(self, value, blockSignal=None):
+        """Override to update widget."""
+        super().setValue(value, blockSignal=blockSignal)
+        for item in self.items:
+            if hasattr(item, "setValue"):
+                item.setValue(value)
+
+    def addRow(self, row_data=None):
+        """Add row programmatically."""
+        current_value = self.value()
+        if row_data is None:
+            columns = self.opts.get("columns", ["Column 1", "Column 2", "Column 3"])
+            row_data = [""] * len(columns)
+        new_value = current_value + [row_data]
+        self.setValue(new_value)
+
+    def removeRow(self, row_index):
+        """Remove row by index."""
+        current_value = self.value()
+        if 0 <= row_index < len(current_value):
+            new_value = current_value[:row_index] + current_value[row_index + 1 :]
+            self.setValue(new_value)
+
+    def clearRows(self):
+        """Clear all row data."""
+        current_value = self.value()
+        new_value = [[""] * len(row) for row in current_value]
+        self.setValue(new_value)
+
+    def valueAsDict(self):
+        """Get value as dict with column names as keys.
+
+        Returns:
+            dict: {column_name: [column_values]}
+        """
+        columns = self.opts.get("columns", ["Column 1", "Column 2", "Column 3"])
+        data = self.value()
+
+        result = {col: [] for col in columns}
+        for row in data:
+            for col_idx, col_name in enumerate(columns):
+                if col_idx < len(row):
+                    result[col_name].append(row[col_idx])
+                else:
+                    result[col_name].append("")
+
+        return result

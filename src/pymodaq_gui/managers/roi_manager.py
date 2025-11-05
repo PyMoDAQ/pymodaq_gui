@@ -207,7 +207,7 @@ class ROIManager(QObject):
         self.roiwidget.setMaximumWidth(300)
 
         params = [
-            {'title': 'Measurements:', 'name': 'measurements', 'type': 'table', 'value': OrderedDict([]), 'Ncol': 2,
+            {'title': 'Measurements:', 'name': 'measurements', 'type': 'table_dict', 'value': OrderedDict([]), 'Ncol': 2,
              'header': ["LO", "Value"]},
             ROIScalableGroup(roi_type=self.ROI_type, name="ROIs")]
         self.settings = Parameter.create(title='ROIs Settings', name='rois_settings', type='group', children=params)
