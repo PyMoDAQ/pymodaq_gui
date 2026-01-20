@@ -85,8 +85,9 @@ class TreeFromToml(QObject):
         params = []
         for key in config:
             if isinstance(config[key], dict):
+                ptype = config[key].get('group_type', 'group')
                 params.append({'title': f'{key.capitalize() if capitalize else key}:',
-                               'name': key, 'type': 'group',
+                               'name': key, 'type': ptype,
                                'children': cls.dict_to_param(config[key], capitalize=capitalize),
                                'expanded': 'user' in key.lower() or 'general' in key.lower()})
             else:

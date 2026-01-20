@@ -9,6 +9,7 @@ from pyqtgraph.parametertree import Parameter
 from pymodaq_gui.config_saver_loader import ConfigSaverLoader, get_set_roi_path
 
 
+
 class CustomConfig(config_mod.BaseConfig):
     """Main class to deal with configuration values for this plugin"""
     config_template_path = None
@@ -57,4 +58,3 @@ class TestConfigSaverLoader:
         saver_loader.load_config(settings)
 
         assert settings['aparent', 'anotherparam', 'max'] == value_before
-

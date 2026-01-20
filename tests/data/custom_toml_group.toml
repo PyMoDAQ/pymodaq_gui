@@ -1,0 +1,9 @@
+title = 'this is the configuration file of the plugin XXX'
+
+[astandardgroup]
+afloat = 12.3
+aint = 8
+
+[acustomgroup]
+group_type = 'mycustomgroupparameter'
+
